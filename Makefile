@@ -1,5 +1,19 @@
-dashboardv1:
-	docker run -it --rm --add-host=host.docker.internal:host-gateway -p 9000:9000 --network example_apisix -v ./apisix_dashboard/config.yaml:/usr/local/apisix-dashboard/conf/conf.yaml apache/apisix-dashboard:latest
+# cnet means custom network which should be similar
+# to what is specified in compose file for etcd container
+cnet := apisix_network
 
-dashbaordv2:
-	docker run -it -d --rm -p 9000:9000 --network example_apisix -v ./apisix_dashboard/config.yaml:/usr/local/apisix-dashboard/conf/conf.yaml apache/apisix-dashboard:latest
+init:
+	@if [ -z "$$(docker network ls --filter name=${cnet} -q)" ]; then \
+		echo "Creating Docker network '${cnet}'..."; \
+		docker network create ${cnet}; \
+	else \
+		echo "Docker network '${cnet}' already exists."; \
+	fi
+	docker compose up -d
+	make dashbaord
+
+reinit:
+	docker compose down -v && make init
+
+dashbaord:
+	docker run -it -d --rm -p 9000:9000 --network ${cnet} -v ./apisix_dashboard/config.yaml:/usr/local/apisix-dashboard/conf/conf.yaml apache/apisix-dashboard:latest
